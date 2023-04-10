@@ -11,7 +11,7 @@ public class SocketClient {
     private static final int DEFAULT_PORT = 1234;
 
     public static void main(String[] args) {
-        if (args.length < 1) {
+        if (args.length < 2) {
             LOGGER.severe("Server address not specified");
             return;
         }
@@ -50,7 +50,7 @@ public class SocketClient {
                     LOGGER.log(Level.SEVERE, "Error writing to socket", e);
                 }
             }
-
+            socket.close();
             socketThread.interrupt();
             socketThread.join();
 
