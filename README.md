@@ -6,12 +6,12 @@
 In a command prompt run:
 javac Server.java
 java Server <port> SocketClient
-
-*Server runs*
-*Able to now send messages*
+-----------------------------
+Server runs
+Able to now send messages
 
 In another command prompt run:
 javac SocketClient.java
 java SocketClient locahost <port>
-
-*Messages should be recieved now*
+-----------------------------
+Messages should be recieved now
