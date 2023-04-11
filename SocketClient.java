@@ -1,64 +1,43 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.io.*;
+import java.net.*;
+import java.util.logging.*;
 
 public class SocketClient {
     private static final Logger LOGGER = Logger.getLogger(SocketClient.class.getName());
-    private static final int DEFAULT_PORT = 1234;
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            LOGGER.severe("Server address not specified");
-            return;
+            System.err.println("Usage: java SocketClient <server> <port> [input ...]");
+            System.exit(1);
         }
 
-        int port = DEFAULT_PORT;
-        if (args.length > 1) {
-            try {
-                port = Integer.parseInt(args[1]);
-            } catch (NumberFormatException e) {
-                LOGGER.log(Level.WARNING, "Invalid port number specified: " + args[1], e);
-            }
+        String server = args[0];
+        int port = Integer.parseInt(args[1]);
+
+        String[] input = new String[0];
+        if (args.length > 2) {
+            input[0] = args[2];
         }
 
-        try (Socket socket = new Socket(args[0], port);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-            LOGGER.info("Connected to server " + args[0] + ":" + port);
+        try (Socket socket = new Socket(server, port);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)) {
 
-            Thread socketThread = new Thread(() -> {
-                try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                    String line;
-                    while ((line = in.readLine()) != null) {
-                        System.out.println(line);
-                    }
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Error reading from socket", e);
-                }
-            });
-            socketThread.start();
+            LOGGER.log(Level.INFO, "Connected to {0}:{1}", new Object[] {server, port});
 
-            String input;
-            while ((input = reader.readLine()) != null && !input.equals("quit")) {
-                try (OutputStream out = socket.getOutputStream()) {
-                    out.write(input.getBytes());
-                    out.flush();
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Error writing to socket", e);
-                }
+            for (String s : input) {
+                LOGGER.log(Level.INFO, "Sending input: {0}", s);
+                out.println(s);
             }
-            socket.close();
-            socketThread.interrupt();
-            socketThread.join();
 
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error connecting to server", e);
-        } catch (InterruptedException e) {
-            LOGGER.log(Level.SEVERE, "Threads interrupted", e);
-            Thread.currentThread().interrupt();
+            String line;
+            while ((line = in.readLine()) != null) {
+                LOGGER.log(Level.INFO, "Received output: {0}", line);
+                System.out.println(line);
+            }
+
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Error connecting to server", ex);
         }
     }
 }
