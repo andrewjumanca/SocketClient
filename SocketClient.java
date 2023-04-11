@@ -3,41 +3,45 @@ import java.net.*;
 import java.util.logging.*;
 
 public class SocketClient {
-    private static final Logger LOGGER = Logger.getLogger(SocketClient.class.getName());
+    private static final Logger logger = Logger.getLogger(SocketClient.class.getName());
+    private static final String LOG_LEVEL_FLAG = "--loglevel=";
 
-    public static void main(String[] args) {
-        if (args.length < 2) {
-            System.err.println("Usage: java SocketClient <server> <port> [input ...]");
-            System.exit(1);
-        }
+    public static void main(String args[]) {
+        String host = args[0];
+        int port = Integer.valueOf(args[1]);
+        Level logLevel = parseLogLevel(args);
 
-        String server = args[0];
-        int port = Integer.parseInt(args[1]);
+        ConsoleHandler handler = new ConsoleHandler();
+        handler.setLevel(logLevel);
+        logger.addHandler(handler);
+        logger.setLevel(logLevel);
 
-        String[] input = new String[0];
-        if (args.length > 2) {
-            input[0] = args[2];
-        }
+        logger.info("Connecting to " + host + ":" + port);
+        try (Socket socket = new Socket(host, port)) {
+            logger.info("Connected to " + host + ":" + port);
+            OutputStream out = socket.getOutputStream();
+            String get = "GET / HTTP/1.1";
+            out.write(get.getBytes());
 
-        try (Socket socket = new Socket(server, port);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)) {
-
-            LOGGER.log(Level.INFO, "Connected to {0}:{1}", new Object[] {server, port});
-
-            for (String s : input) {
-                LOGGER.log(Level.INFO, "Sending input: {0}", s);
-                out.println(s);
+            InputStream in = socket.getInputStream();
+            int readChar = 0;
+            while ((readChar = in.read()) != -1) {
+                System.out.write(readChar);
             }
-
-            String line;
-            while ((line = in.readLine()) != null) {
-                LOGGER.log(Level.INFO, "Received output: {0}", line);
-                System.out.println(line);
-            }
-
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Error connecting to server", ex);
+            socket.close();
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, "Exception occurred", ex);
         }
+    }
+
+    private static Level parseLogLevel(String[] args) {
+        Level level = Level.INFO;
+        for (String arg : args) {
+            if (arg.startsWith(LOG_LEVEL_FLAG)) {
+                String levelName = arg.substring(LOG_LEVEL_FLAG.length()).toUpperCase();
+                level = Level.parse(levelName);
+            }
+        }
+        return level;
     }
 }
